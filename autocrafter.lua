@@ -20,11 +20,76 @@ local function get_item_info(stack)
 	return description, name
 end
 
+local allRecipes = {}
+minetest.after(0, function()
+	for name,_ in pairs(minetest.registered_items) do
+		local recipes = minetest.get_all_craft_recipes(name)
+		if recipes == nil then
+			recipes = {}
+		end
+		for i = 1, #recipes do
+			if recipes[i].method == "normal" then
+				if recipes[i].width == 1 then
+					recipes[i].items = {
+						recipes[i].items[1] or "", "", "",
+						recipes[i].items[2] or "", "", "",
+						recipes[i].items[3] or "", "", ""
+					}
+				elseif recipes[i].width == 2 then
+					recipes[i].items = {
+						recipes[i].items[1] or "", recipes[i].items[2] or "", "",
+						recipes[i].items[3] or "", recipes[i].items[4] or "", "",
+						recipes[i].items[5] or "", recipes[i].items[6] or "", ""
+					}
+				elseif recipes[i].width == 3 then
+					recipes[i].items = {
+						recipes[i].items[1] or "", recipes[i].items[2] or "", recipes[i].items[3] or "",
+						recipes[i].items[4] or "", recipes[i].items[5] or "", recipes[i].items[6] or "",
+						recipes[i].items[7] or "", recipes[i].items[8] or "", recipes[i].items[9] or ""
+					}
+				end
+				for k = recipes[i].width, 3 do
+					local hashed_key = dump(recipes[i].items)
+					if allRecipes[hashed_key] then
+						table.insert(allRecipes[hashed_key], name)
+					else
+						allRecipes[hashed_key] = {name}
+					end
+					recipes[i].items = {
+						"", recipes[i].items[1] or "", recipes[i].items[2] or "",
+						"", recipes[i].items[4] or "", recipes[i].items[5] or "",
+						"", recipes[i].items[7] or "", recipes[i].items[8] or ""
+					}
+				end
+			end
+		end
+	end
+	--~ print(dump(allRecipes))
+end)
+
+local function get_craft_results(input)
+	return allRecipes[dump(input)]
+end
+
 local function get_craft(pos, inventory, hash)
 	local hash = hash or minetest.hash_node_position(pos)
 	local craft = autocrafterCache[hash]
 	if not craft then
 		local recipe = inventory:get_list("recipe")
+		local srecipe = {}
+		for i = 1, 9 do
+			if recipe[i] == nil then
+				srecipe[i] = ""
+			else
+				srecipe[i] = recipe[i]:get_name()
+			end
+		end
+		print(dump(srecipe))
+		local results = get_craft_results(srecipe)
+		print(dump(results))
+		--~ if #results > 1 then
+			--~ minetest.chat_send_all("multible results:\n"..dump(results))
+		--~ end
 		local output, decremented_input = minetest.get_craft_result({method = "normal", width = 3, items = recipe})
 		craft = {recipe = recipe, consumption=count_index(recipe), output = output, decremented_input = decremented_input}
 		autocrafterCache[hash] = craft
