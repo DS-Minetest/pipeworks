@@ -49,9 +49,13 @@ minetest.after(0, function()
 					}
 				end
 				for k = recipes[i].width, 3 do
-					local hashed_key = dump(recipes[i].items)
+					if minetest.serialize(recipes[i].items) == minetest.serialize({"", "", "", "", "", "", "", "", ""}) then
+						break
+					end
+					local hashed_key = minetest.serialize(recipes[i].items)
 					if allRecipes[hashed_key] then
-						table.insert(allRecipes[hashed_key], name)
+						allRecipes[hashed_key][#allRecipes[hashed_key]+1] = name
+						print(hashed_key)
 					else
 						allRecipes[hashed_key] = {name}
 					end
@@ -64,11 +68,10 @@ minetest.after(0, function()
 			end
 		end
 	end
-	--~ print(dump(allRecipes))
 end)
 
 local function get_craft_results(input)
-	return allRecipes[dump(input)]
+	return allRecipes[minetest.serialize(input)]
 end
 
 local function get_craft(pos, inventory, hash)
@@ -84,12 +87,11 @@ local function get_craft(pos, inventory, hash)
 				srecipe[i] = recipe[i]:get_name()
 			end
 		end
-		print(dump(srecipe))
 		local results = get_craft_results(srecipe)
 		print(dump(results))
-		--~ if #results > 1 then
-			--~ minetest.chat_send_all("multible results:\n"..dump(results))
-		--~ end
+		if #results > 1 then
+			minetest.chat_send_all("multible results:\n"..dump(results))
+		end
 		local output, decremented_input = minetest.get_craft_result({method = "normal", width = 3, items = recipe})
 		craft = {recipe = recipe, consumption=count_index(recipe), output = output, decremented_input = decremented_input}
 		autocrafterCache[hash] = craft
